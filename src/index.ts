@@ -10,11 +10,11 @@ import _ from "lodash";
 import { resolve } from "path";
 import { topicNameFromArn } from "./helpers.js";
 import { spawn } from "child_process";
-import lodashfp from 'lodash/fp.js';
+import lodashfp from "lodash/fp.js";
 const { get, has } = lodashfp;
 
 import { loadServerlessConfig } from "./sls-config-parser.js";
-import url from 'url';
+import url from "url";
 
 class ServerlessOfflineSns {
   private config: any;
@@ -111,15 +111,37 @@ class ServerlessOfflineSns {
     } else {
       this.region = "us-east-1";
     }
-    this.autoSubscribe = this.config.autoSubscribe === undefined ? true : this.config.autoSubscribe;
+    this.autoSubscribe =
+      this.config.autoSubscribe === undefined
+        ? true
+        : this.config.autoSubscribe;
   }
 
   public async start() {
     this.init();
     await this.listen();
     await this.serve();
+    await this.createResourceTopics();
     await this.subscribeAll();
     return this.snsAdapter;
+  }
+
+  private async createResourceTopics() {
+    const resources = this.serverless.service.resources?.Resources;
+    const topics = this.getResourceTopics(resources);
+    await Promise.all(
+      topics.map((topic) => this.snsAdapter.createTopic(topic))
+    );
+  }
+
+  private getResourceTopics(resources) {
+    return Object.entries(resources).map((value, key) => {
+      let type = get(["Type"], value);
+      if (type !== "AWS::SNS::Topic") return;
+
+      const topicName = get(["Properties", "TopicName"], value);
+      return topicName;
+    });
   }
 
   public async waitForSigint() {
@@ -184,12 +206,12 @@ class ServerlessOfflineSns {
       const topicName = get(["Properties", "TopicName"], resources[topicArn]);
       const fnName = this.getFunctionName(resourceName);
 
-      if(!topicName){
+      if (!topicName) {
         this.log(`${fnName} does not have a topic name, skipping`);
         return;
       }
 
-      if(!fnName){
+      if (!fnName) {
         this.log(`${topicName} does not have a function, skipping`);
         return;
       }
@@ -216,10 +238,16 @@ class ServerlessOfflineSns {
         for (const directory of shell.ls("-d", "*/")) {
           shell.cd(directory);
           const service = directory.split("/")[0];
-          const serverless = await loadServerlessConfig(shell.pwd().toString(), this.debug);
+          const serverless = await loadServerlessConfig(
+            shell.pwd().toString(),
+            this.debug
+          );
           this.debug("Processing subscriptions for ", service);
           this.debug("shell.pwd()", shell.pwd());
-          this.debug("serverless functions", JSON.stringify(serverless.service.functions));
+          this.debug(
+            "serverless functions",
+            JSON.stringify(serverless.service.functions)
+          );
           const subscriptions = this.getResourceSubscriptions(serverless);
           subscriptions.forEach((subscription) =>
             subscribePromises.push(
@@ -350,12 +378,7 @@ class ServerlessOfflineSns {
     const data = await this.snsAdapter.createTopic(topicName);
     this.debug("topic: " + JSON.stringify(data));
     const handler = await this.createHandler(fnName, fn, lambdasLocation);
-    await this.snsAdapter.subscribe(
-      fn,
-      handler,
-      data.TopicArn,
-      snsConfig
-    );
+    await this.snsAdapter.subscribe(fn, handler, data.TopicArn, snsConfig);
   }
 
   public async subscribeQueue(queueUrl, snsConfig) {
@@ -500,7 +523,7 @@ class ServerlessOfflineSns {
   public async createJavascriptHandler(fn, location) {
     // Options are passed from the command line in the options parameter
     this.debug(process.cwd());
-    const handlerFnNameIndex = fn.handler.lastIndexOf('.');
+    const handlerFnNameIndex = fn.handler.lastIndexOf(".");
     const handlerPath = fn.handler.substring(0, handlerFnNameIndex);
     const handlerFnName = fn.handler.substring(handlerFnNameIndex + 1);
     const fullHandlerPath = resolve(location, handlerPath);
