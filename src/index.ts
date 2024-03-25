@@ -138,7 +138,7 @@ class ServerlessOfflineSns {
   }
 
   private getResourceTopics(resources) {
-    return Object.entries(resources).map((value, key) => {
+    return Object.entries(resources).map(([key, value]) => {
       console.debug(`Resource: ${value}`);
       const type = get(["Type"], value);
       if (type !== "AWS::SNS::Topic") return;
