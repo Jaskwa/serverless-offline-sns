@@ -131,12 +131,15 @@ class ServerlessOfflineSns {
     const resources = this.serverless.service.resources?.Resources;
     const topics = this.getResourceTopics(resources);
     await Promise.all(
-      topics.map((topic) => this.snsAdapter.createTopic(topic))
+      topics
+        .filter((topic) => topic) // truthy, at least...
+        .map((topic) => this.snsAdapter.createTopic(topic))
     );
   }
 
   private getResourceTopics(resources) {
     return Object.entries(resources).map((value, key) => {
+      console.debug(`Resource: ${value}`);
       const type = get(["Type"], value);
       if (type !== "AWS::SNS::Topic") return;
 
