@@ -9,7 +9,7 @@
     "watch": "tsc -p src -w",
     "test": "nyc ts-mocha -r ts-node/register --loader=ts-node/esm --no-warnings=ExperimentalWarning --experimental-specifier-resolution=node \"test/**/*.ts\" -p test/tsconfig.json",
     "lint": "tslint -c tslint.json 'src/**/*'",
-    "prepare": "yarn run lint && yarn test && yarn build",
+    "prepare": "npm run build",
     "prettier": "npx prettier --write src test",
     "upgrade": "npx npm-check-updates -u"
   },
