@@ -121,6 +121,7 @@ class ServerlessOfflineSns {
     this.init();
     await this.listen();
     await this.serve();
+    this.setupSnsAdapter();
     await this.createResourceTopics();
     await this.subscribeAll();
     return this.snsAdapter;
@@ -228,7 +229,6 @@ class ServerlessOfflineSns {
     return subscriptions;
   }
   public async subscribeAll() {
-    this.setupSnsAdapter();
     await this.unsubscribeAll();
     this.debug("subscribing functions");
     const subscribePromises: Array<Promise<any>> = [];
